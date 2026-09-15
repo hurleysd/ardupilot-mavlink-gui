@@ -16,6 +16,8 @@ class GUI:
    @brief Init.
    
    @param root Tk root.
+   @param system_id The MAVLink system ID to display.
+   @param component_id The MAVLink component ID to display.
    @param state The vehicle state to display.
    @param state_lock The mutex that protects state.
    ''' 
