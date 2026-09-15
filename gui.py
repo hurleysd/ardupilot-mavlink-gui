@@ -82,4 +82,4 @@ class GUI:
       )
 
       # Queue next update
-      self.root.after(gui_update_rate_ms, self.update)
+      self.root.after(gui_update_rate_ms, self.update_loop)
