@@ -9,6 +9,8 @@ from dataclasses import dataclass
 
 @dataclass
 class VehicleState:
+   mode: str = "UNKNOWN"         # control mode
+   armed: bool = False           # whether the vehicle is armed
    speed_ms: float = 0.0         # speed in meters per second
    heading_deg: float = 0.0      # heading in degrees
    latitude_deg: float = 0.0     # latitude in degrees

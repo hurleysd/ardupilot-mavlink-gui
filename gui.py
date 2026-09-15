@@ -19,8 +19,10 @@ class GUI:
    @param state The vehicle state to display.
    @param state_lock The mutex that protects state.
    ''' 
-   def __init__(self, root, state, state_lock):
+   def __init__(self, root, system_id, component_id, state, state_lock):
       self.root = root
+      self.system_id = system_id
+      self.component_id = component_id
       self.state = state
       self.state_lock = state_lock
 
@@ -38,10 +40,16 @@ class GUI:
 
       ttk.Label(
          frame,
-         text="Vehicle State",
+         text=f"System {self.system_id} Component {self.component_id}",
          font=("TkDefaultFont", 16, "bold"),
       ).pack(pady=(0, 20))
 
+      self.mode_label = ttk.Label(frame, text="Mode: UNKNOWN")
+      self.mode_label.pack(anchor="w")
+      
+      self.armed_label = ttk.Label(frame, text="Armed: FALSE")
+      self.armed_label.pack(anchor="w")
+            
       self.speed_label = ttk.Label(frame, text="Speed: 0.0 m/s")
       self.speed_label.pack(anchor="w")
 
@@ -61,6 +69,8 @@ class GUI:
       # Acquire mutex and get latest state info
       with self.state_lock:
          state = VehicleState(
+            mode=self.state.mode,
+            armed=self.state.armed,
             speed_ms=self.state.speed_ms,
             heading_deg=self.state.heading_deg,
             latitude_deg=self.state.latitude_deg,
@@ -68,6 +78,14 @@ class GUI:
          )
 
       # Update widgets
+      self.mode_label.config(
+         text="Mode: " + state.mode
+      )
+      
+      self.armed_label.config(
+         text="Armed: " + str(state.armed)
+      )
+      
       self.speed_label.config(
          text=f"Speed: {state.speed_ms:.1f} m/s"
       )
@@ -78,7 +96,7 @@ class GUI:
 
       self.position_label.config(
          text=f"Position: {state.latitude_deg:.6f}°, "
-            f"{state.longitude_deg:.6f}°"
+              f"{state.longitude_deg:.6f}°"
       )
 
       # Queue next update
