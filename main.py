@@ -5,17 +5,12 @@
 
 @brief Entry point. Runs the MAVLink message receiver and the GUI.
 '''
+import argparse
 import threading
 from pymavlink import mavutil
 import tkinter as tk
 from vehicle_state import VehicleState
 from gui import GUI
-
-'''
-@brief Print information about this tool.
-'''
-def printInfo():
-   pass
       
 '''
 @brief Receive relevant MAVLink messages on a loop and store them. To be threaded. 
@@ -38,15 +33,17 @@ def mavlink_recv_loop(connection, state, state_lock, shutdown_event):
    
       # Acquire mutex and update shared state
       with state_lock:
-         state.speed_ms = (msg.vx**2 + msg.vy**2) ** 0.5 / 100.0
+         state.speed_ms = ((msg.vx**2 + msg.vy**2) ** 0.5) / 100.0
          state.heading_deg = msg.hdg / 100.0
          state.latitude_deg = msg.lat / 1e7
          state.longitude_deg = msg.lon / 1e7
          
 '''
 @brief Main - initializes MAVLink connection and GUI.
+
+@param args Command line arguments.
 '''
-def main():
+def main(args):
    # Shared vehicle state
    state = VehicleState()
    state_lock = threading.Lock()
@@ -55,7 +52,7 @@ def main():
    shutdown_event = threading.Event()
 
    # Initialize MAVLink connection
-   connection = mavutil.mavlink_connection("udp:127.0.0.1:14550")
+   connection = mavutil.mavlink_connection(args.connection)
 
    print("Waiting for heartbeat...")
    connection.wait_heartbeat()
@@ -90,12 +87,24 @@ def main():
    
    # Run GUI
    try:
-      root.mainloop() # start Tk event loop and show the GUI
+      root.mainloop()
    except KeyboardInterrupt:
       shutdown()
 
 '''
-@brief Entrypoint.
+@brief Entrypoint - parses command line arguments.
 '''
 if __name__ == "__main__":
-   main()
+   parser = argparse.ArgumentParser(
+      description="MAVLink controller and telemetry GUI for ArduPilot vehicles"
+   )
+
+   parser.add_argument(
+      "-c",
+      "--connection",
+      default="udp:127.0.0.1:14550",
+      help="MAVLink connection string "
+           "(default: udp:127.0.0.1:14550)",
+   )
+   
+   main(parser.parse_args())
