@@ -67,7 +67,7 @@ def main():
 
    receiver_thread = threading.Thread(
       target=mavlink_recv_loop,
-      args=(connection,),
+      args=(connection, state, state_lock, shutdown_event),
       daemon=True,
    )
    receiver_thread.start()
