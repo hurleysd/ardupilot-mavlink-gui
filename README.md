@@ -13,12 +13,12 @@ The `docker` subdirectory contains a Dockerfile as well as a Bash script, `build
 ### Dependencies
 
 Linux:
-- python3
-- python3-tk
+- `python3` version 3.10+
+- `python3-tk`
 > Note, system package names can differ across Linux distributions
 
-python:
-- pymavlink
+python packages:
+- `pymavlink`
 > Alternatively, run `python3 -m pip install -r requirements.txt`
 
 ## How to Run
