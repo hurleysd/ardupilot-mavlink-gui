@@ -5,97 +5,90 @@
 
 @brief Entry point. Runs the MAVLink message receiver and the GUI.
 '''
+import argparse
 import threading
 from pymavlink import mavutil
 import tkinter as tk
 from vehicle_state import VehicleState
+from mavlink_interface import MAVLinkInterface
 from gui import GUI
 
 '''
-@brief Print information about this tool.
-'''
-def printInfo():
-   pass
-      
-'''
-@brief Receive relevant MAVLink messages on a loop and store them. To be threaded. 
+@brief Main - initializes MAVLink interface and GUI.
 
-@param connection The MAVLink connection to receive on.
-@param state The vehicle state to store received data into.
-@param state_lock The mutex that protects state.
-@param shutdown_event The threading event that will notify when to shutdown.
-''' 
-def mavlink_recv_loop(connection, state, state_lock, shutdown_event):
-   while not shutdown_event.is_set():
-      msg = connection.recv_match(
-         type="GLOBAL_POSITION_INT",
-         blocking=True,
-         timeout=1.0,
-      )
-
-      if msg is None:
-         continue
-   
-      # Acquire mutex and update shared state
-      with state_lock:
-         state.speed_ms = (msg.vx**2 + msg.vy**2) ** 0.5 / 100.0
-         state.heading_deg = msg.hdg / 100.0
-         state.latitude_deg = msg.lat / 1e7
-         state.longitude_deg = msg.lon / 1e7
-         
+@param args Command line arguments.
 '''
-@brief Main - initializes MAVLink connection and GUI.
-'''
-def main():
+def main(args):
    # Shared vehicle state
    state = VehicleState()
    state_lock = threading.Lock()
 
-   # Threading events
-   shutdown_event = threading.Event()
+   # Initialize MAVLink connection & interface
+   connection = mavutil.mavlink_connection(args.address)
+   interface = MAVLinkInterface(connection, args.system_id, args.component_id, state, state_lock)
+   
+   print(f"Waiting for heartbeat from {args.address} for system {args.system_id} component {args.component_id}...")
+   try:
+      interface.wait_for_target_heartbeat()
+   except KeyboardInterrupt:
+      print("\nShutting down...")
+      interface.shutdown()
+      return
 
-   # Initialize MAVLink connection
-   connection = mavutil.mavlink_connection("udp:127.0.0.1:14550")
-
-   print("Waiting for heartbeat...")
-   connection.wait_heartbeat()
-
-   print(
-      f"Connected to system {connection.target_system}, "
-      f"component {connection.target_component}"
-   )
-
-   receiver_thread = threading.Thread(
-      target=mavlink_recv_loop,
-      args=(connection,),
-      daemon=True,
-   )
-   receiver_thread.start()
+   interface.start_receiver_thread()
    
    # Initialize GUI
    root = tk.Tk()
    
    def shutdown():
       print("\nShutting down...")
-
-      shutdown_event.set()
-      receiver_thread.join(timeout=2.0)
-      connection.close()
+      interface.shutdown()
       root.destroy()
       
    root.protocol("WM_DELETE_WINDOW", shutdown)
    
-   gui = GUI(root, state, state_lock)
-   gui.update_loop() # start GUI vehicle state update loop
+   gui = GUI(root, args.system_id, args.component_id, state, state_lock,
+             interface.set_guided_mode, interface.send_arm_cmd, interface.send_goto_cmd)
+   gui.update_loop()
    
    # Run GUI
    try:
-      root.mainloop() # start Tk event loop and show the GUI
+      root.mainloop()
    except KeyboardInterrupt:
       shutdown()
 
 '''
-@brief Entrypoint.
+@brief Entrypoint - parses command line arguments.
 '''
 if __name__ == "__main__":
-   main()
+   parser = argparse.ArgumentParser(
+      description="MAVLink controller and telemetry GUI for ArduPilot vehicles"
+   )
+
+   parser.add_argument(
+      "-a",
+      "--address",
+      default="udp:127.0.0.1:14550",
+      help="MAVLink connection string "
+           "(default: udp:127.0.0.1:14550)",
+   )
+   
+   parser.add_argument(
+      "-s",
+      "--system-id",
+      type=int,
+      default=1,
+      help="MAVLink system ID "
+           "(default: 1)",
+   )
+   
+   parser.add_argument(
+      "-c",
+      "--component-id",
+      type=int,
+      default=1,
+      help="MAVLink component ID "
+           "(default: 1)",
+   )
+   
+   main(parser.parse_args())
