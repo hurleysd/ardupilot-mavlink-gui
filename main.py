@@ -25,13 +25,7 @@ def main(args):
 
    # Initialize MAVLink connection & interface
    connection = mavutil.mavlink_connection(args.address)
-   interface = MAVLinkInterface(
-      connection,
-      args.system_id,
-      args.component_id,
-      state,
-      state_lock,
-   )
+   interface = MAVLinkInterface(connection, args.system_id, args.component_id, state, state_lock)
    
    print(f"Waiting for heartbeat from {args.address} for system {args.system_id} component {args.component_id}...")
    try:
@@ -41,7 +35,6 @@ def main(args):
       interface.shutdown()
       return
 
-   # Start MAVLink interface receiver thread
    interface.start_receiver_thread()
    
    # Initialize GUI
@@ -54,8 +47,9 @@ def main(args):
       
    root.protocol("WM_DELETE_WINDOW", shutdown)
    
-   gui = GUI(root, args.system_id, args.component_id, state, state_lock)
-   gui.update_loop() # start GUI vehicle state update loop
+   gui = GUI(root, args.system_id, args.component_id, state, state_lock,
+             interface.set_guided_mode, interface.send_arm_cmd, interface.send_goto_cmd)
+   gui.update_loop()
    
    # Run GUI
    try:
