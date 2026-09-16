@@ -13,7 +13,7 @@ gui_update_rate_ms = 1000
 
 class GUI:
    '''
-   @brief Init.
+   @brief Constructor.
    
    @param root Tk root.
    @param system_id The MAVLink system ID to display.
