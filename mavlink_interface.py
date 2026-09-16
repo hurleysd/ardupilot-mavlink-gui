@@ -32,6 +32,12 @@ class MAVLinkInterface:
       
       self.shutdown_event = threading.Event()
       self.receiver_thread = None
+      
+   '''
+   -------------------------------------------------------------------------------------------
+   STATUS RECEIVING
+   -------------------------------------------------------------------------------------------
+   '''
    
    '''
    @brief Loop until a MAVLink heartbeat message is received for the specified system component.
@@ -111,3 +117,54 @@ class MAVLinkInterface:
          self.receiver_thread.join(timeout=2.0)
 
       self.connection.close()
+      
+   '''
+   -------------------------------------------------------------------------------------------
+   COMMAND SENDING
+   -------------------------------------------------------------------------------------------
+   '''
+   
+   '''
+   @brief Change the vehicle to GUIDED mode.
+   '''
+   def set_guided_mode(self):
+      self.connection.set_mode("GUIDED")
+
+   '''
+   @brief Send an arm command to the vehicle.
+   '''
+   def send_arm_cmd(self):
+      self.connection.mav.command_long_send(
+         self.system_id,
+         self.component_id,
+         mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+         0,
+         1, # arm
+         0,
+         0,
+         0,
+         0,
+         0,
+         0,
+      )
+
+   '''
+   @brief Send a global position target to the vehicle.
+   
+   @param latitude_deg Target latitude in degrees.
+   @param longitude_deg Target longitude in degrees.
+   '''
+   def send_goto_cmd(self, latitude_deg, longitude_deg):
+      self.connection.mav.set_position_target_global_int_send(
+         0, # time_boot_ms
+         self.system_id,
+         self.component_id,
+         mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,
+         3580, # position only
+         int(latitude_deg * 1e7),
+         int(longitude_deg * 1e7),
+         0,       # altitude
+         0, 0, 0, # velocity x, y, z
+         0, 0, 0, # acceleration x, y, z
+         0, 0,    # yaw, yaw rate
+      )
